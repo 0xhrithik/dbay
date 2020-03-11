@@ -111,6 +111,43 @@ window.App = {
         });
     },
 };
+const offchainServer = "http://localhost:3000";
+const categories = ["Art","Books","Cameras","Cell Phones & Accessories","Clothing","Computers & Tablets","Gift Cards & Coupons","Musical Instruments & Gear","Pet Supplies","Pottery & Glass","Sporting Goods","Tickets","Toys & Hobbies","Video Games"];
+
+function renderProducts(div,filters){
+  $.ajax({
+  url:offchainServer+"/products",
+  type:'get',
+  contentType:"application/json;charset=utf-8",
+  data:filters
+ }).done(function(data){
+   if(data.length==0){
+    $("#"+div).html('No products found');
+  } else{
+    $("#"+div).html('');
+  }
+  while (data.length>0){
+    let chunks = data.splice(0,4);
+    let row = $("<div/>");
+    row.addClass("row");
+    chunks.forEach(function(value){
+     let node= buildProduct(value);
+     row.append(node);
+   })
+   $("#"+div).append(row);
+  }
+ })
+}
+
+// function renderStore(){
+//   renderProducts("product-list",{});
+//   renderProducts("product-reveal-list",{productStatus:"reveal"});
+//   renderProducts ("product-finalize-list",{productStatus: "finalize"});
+//   categories.forEach(function(value){
+//       $("#categories").append("<div>" + value + " ");
+//  })
+// }
+
 
 function renderStore(){
     EcommerceStore.deployed().then(i=>{
