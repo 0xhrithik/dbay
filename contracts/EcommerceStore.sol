@@ -1,4 +1,5 @@
 pragma solidity >=0.5.16;
+import "./Ecscrow.sol";
 
 contract EcommerceStore {
     enum ProductStatus { Open, Sold, Unsold }
@@ -6,7 +7,8 @@ contract EcommerceStore {
 
     uint public productIndex;
     mapping (address => mapping(uint => Product)) stores;
-    mapping (uint => address) productIdInStore;
+    mapping (uint => address payable) productIdInStore;
+    mapping (uint => address) productEscrow;
 
     struct Product {
         uint id;
@@ -37,6 +39,10 @@ contract EcommerceStore {
        productIndex = 0;
     }
 
+    event NewProduct (uint _productId, string _name, string _category,
+    string _imageLink, string _descLink, uint _auctionStartTime, uint _auctionEndTime, uint _startPrice, uint _productCondition);
+
+
     function addProductToStore(string memory _name, string memory _category, string memory _imageLink,
      string memory _descLink, uint _auctionStartTime,
      uint _auctionEndTime, uint _startPrice, uint _productCondition) public {
@@ -46,6 +52,9 @@ contract EcommerceStore {
         _startPrice, address(0), 0, 0, 0, ProductStatus.Open, ProductCondition(_productCondition));
         stores[msg.sender][productIndex] = product;
         productIdInStore[productIndex] = msg.sender;
+        emit NewProduct (productIndex, _name, _category, _imageLink, _descLink, _auctionStartTime, _auctionEndTime, _startPrice,
+        _productCondition);
+
     }
 
     function getProduct(uint _productId)public view
@@ -138,5 +147,35 @@ contract EcommerceStore {
         return result;
     }
 
+function finalizeAuction(uint _productId) public {
+        Product memory product = stores[productIdInStore[_productId]][_productId];
+        require((now > product.auctionEndTime), "Current time should be later than auction end time");
+        require(product.status == ProductStatus.Open, "Product status should be open");
+        require(msg.sender != productIdInStore[_productId], "Caller should not be seller");
+        require(msg.sender != product.highestBidder, "Caller should not be buyer");
 
+        if(product.highestBidder == address(0)){
+            product.status = ProductStatus.Unsold;
+        } else{
+            Escrow escrow = (new Escrow).value(product.secondHighestBid)(_productId, productIdInStore[_productId], product.highestBidder, msg.sender);
+            productEscrow[_productId] = address(escrow);
+            product.status = ProductStatus.Sold;
+            uint refund = product.highestBid - product.secondHighestBid;
+            product.highestBidder.transfer(refund);
+        }
+        stores[productIdInStore[_productId]][_productId] = product;
+    }
+
+    function escrowAddressForProduct(uint _productId) public view returns(address){
+        return productEscrow[_productId];
+    }
+    function escrowInfo(uint _productId) public view returns (address, address, address, bool, uint, uint){
+        return Escrow(productEscrow[_productId]).escrowInfo();
+    }
+    function releaseAmountToSeller(uint _productId) public {
+        Escrow(productEscrow[_productId]).realseAmountToSeller(msg.sender);
+    }
+    function refundAmountToBuyer(uint _productId) public {
+        Escrow(productEscrow[_productId]).refundAmountToBuyer(msg.sender);
+    }
 }

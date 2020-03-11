@@ -9,9 +9,10 @@
     },
     "devDependencies": {
         "Ethereumjs-util": "^5.1.2",
+        "copy-webpack-plugin": "^5.0.5",
         "ipfs-api": "^18.1.1",
         "ipfs-http-client": "^42.0.0",
-        "copy-webpack-plugin": "^5.0.5",
+        "mongoose": "^5.9.4",
         "webpack": "^4.41.2",
         "webpack-cli": "^3.3.10",
         "webpack-dev-server": "^3.9.0"
